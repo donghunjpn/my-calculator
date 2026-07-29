@@ -1,1 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>퇴사 실수령액 계산기</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F1EA;
+    --paper-2:#EAE7DD;
+    --ink:#141B2E;
+    --ink-soft:#454F68;
+    --line:#CFC9B8;
+    --money:#0E6B54;
+    --money-soft:#E4EFE9;
+    --tax:#A23B2E;
+    --tax-soft:#F3E6E2;
+    --stamp:#B0433A;
+  }
+  * { box-sizing:border-box; }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .font-serif-kr{ font-family:'Noto Serif KR',serif; }
+  .font-mono-num{ font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; }
 
+  .paper-texture{
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(20,27,46,0.035) 1px, transparent 0);
+    background-size: 14px 14px;
+  }
+
+  .field-input{
+    background:#fff;
+    border:1.5px solid var(--line);
+    color:var(--ink);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field-input:focus{
+    outline:none;
+    border-color:var(--ink);
+    box-shadow: 0 0 0 3px rgba(20,27,46,0.08);
+  }
+
+  .stub{
+    background:#fff;
+    border:1.5px solid var(--ink);
+    position:relative;
+  }
+  .perforation{
+    border-top: 2px dashed var(--line);
+    position:relative;
+  }
+  .perforation::before, .perforation::after{
+    content:'';
+    position:absolute;
+    top:-9px;
+    width:18px; height:18px;
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    border-radius:9999px;
+  }
+  .perforation::before{ left:-10px; }
+  .perforation::after{ right:-10px; }
+
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:78px; height:78px;
+    border-radius:9999px;
+    border: 3px solid var(--stamp);
+    color:var(--stamp);
+    transform: rotate(-9deg);
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    letter-spacing:0.05em;
+    flex-shrink:0;
+  }
+
+  .row-line{
+    border-bottom: 1px solid var(--paper-2);
+  }
+
+  .eyebrow{
+    letter-spacing: 0.18em;
+    font-weight:700;
+  }
+
+  ::selection{ background: var(--ink); color:var(--paper); }
+
+  input[type="date"]::-webkit-calendar-picker-indicator{
+    filter: invert(9%) sepia(15%) saturate(1200%) hue-rotate(190deg);
+  }
+
+  @media (max-width: 640px){
+    .stamp{ width:64px; height:64px; font-size:0.65rem; }
+  }
+</style>
+</head>
+<body class="paper-texture min-h-screen">
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+  <!-- Header -->
+  <header class="mb-8 sm:mb-12 border-b-2 border-[var(--ink)] pb-5">
+    <p class="eyebrow text-[11px] sm:text-xs text-[var(--ink-soft)] mb-2">SEVERANCE PAY WORKSHEET · 퇴직정산 계산서</p>
+    <div class="flex items-end justify-between flex-wrap gap-3">
+      <h1 class="font-serif-kr text-3xl sm:text-4xl font-700 tracking-tight">퇴사 실수령액 계산기</h1>
+      <p class="text-xs sm:text-sm text-[var(--ink-soft)] font-mono-num">No. RTS-2026</p>
+    </div>
+    <p class="mt-2 text-sm text-[var(--ink-soft)] leading-relaxed">근속기간과 급여 정보를 입력하면 퇴직금, 예상 퇴직소득세, 최종 실수령액을 자동으로 계산합니다.</p>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
+
+    <!-- LEFT: INPUT FORM -->
+    <div class="lg:col-span-3 space-y-6">
+
+      <!-- Section 1: 근로기간 -->
+      <section class="bg-white border-[1.5px] border-[var(--ink)] p-5 sm:p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="font-mono-num text-xs bg-[var(--ink)] text-white px-2 py-0.5">01</span>
+          <h2 class="font-serif-kr text-lg font-600">근로 기간</h2>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-700 text-[var(--ink-soft)] mb-1.5">입사일</label>
+            <input type="date" id="startDate" class="field-input w-full px-3 py-2.5 text-sm rounded-none">
+          </div>
+          <div>
+            <label class="block text-xs font-700 text-[var(--ink-soft)] mb-1.5">퇴사일</label>
+            <input type="date" id="endDate" class="field-input w-full px-3 py-2.5 text-sm rounded-none">
+          </div>
+        </div>
+        <div id="durationDisplay" class="mt-4 text-sm font-mono-num text-[var(--ink-soft)] bg-[var(--paper)] px-3 py-2 border border-[var(--paper-2)]">
+          근속일수를 계산하려면 입사일과 퇴사일을 입력하세요.
+        </div>
+      </section>
+
+      <!-- Section 2: 급여 정보 -->
+      <section class="bg-white border-[1.5px] border-[var(--ink)] p-5 sm:p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="font-mono-num text-xs bg-[var(--ink)] text-white px-2 py-0.5">02</span>
+          <h2 class="font-serif-kr text-lg font-600">급여 및 수당 정보</h2>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-700 text-[var(--ink-soft)] mb-1.5">
+            최근 3개월간 기본급 + 수당 총액 <span class="text-[var(--tax)]">*</span>
+          </label>
+          <div class="relative">
+            <input type="text" inputmode="numeric" id="threeMonthWage" placeholder="예: 12,000,000" class="field-input w-full px-3 py-2.5 pr-10 text-sm rounded-none font-mono-num">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-soft)]">원</span>
+          </div>
+          <p class="mt-1 text-[11px] text-[var(--ink-soft)]">퇴사일 직전 3개월간 받은 세전 기본급과 각종 수당의 합계 (퇴직금 산정 기준 평균임금 계산용)</p>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-700 text-[var(--ink-soft)] mb-1.5">최근 1년간 연차수당 및 상여금 총액</label>
+          <div class="relative">
+            <input type="text" inputmode="numeric" id="annualBonus" placeholder="예: 3,000,000 (없으면 0)" class="field-input w-full px-3 py-2.5 pr-10 text-sm rounded-none font-mono-num">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-soft)]">원</span>
+          </div>
+          <p class="mt-1 text-[11px] text-[var(--ink-soft)]">지급받은 금액의 3/12만큼 평균임금 계산에 반영됩니다.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-700 text-[var(--ink-soft)] mb-1.5">미사용 연차 개수</label>
+          <div class="relative">
+            <input type="text" inputmode="numeric" id="unusedLeave" placeholder="예: 5" class="field-input w-full px-3 py-2.5 pr-10 text-sm rounded-none font-mono-num">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--ink-soft)]">일</span>
+          </div>
+          <p class="mt-1 text-[11px] text-[var(--ink-soft)]">1일 평균임금을 기준으로 미사용 연차수당을 추정합니다 (통상임금과 차이가 있을 수 있음).</p>
+        </div>
+      </section>
+
+      <button id="calcBtn" class="w-full bg-[var(--ink)] text-white font-serif-kr text-base font-600 py-3.5 tracking-wide hover:bg-[#232D48] active:scale-[0.99] transition-all">
+        계산하기
+      </button>
+
+      <p class="text-[11px] text-[var(--ink-soft)] leading-relaxed px-1">
+        ※ 본 계산기는 근로기준법 및 소득세법(2024년 개정 세율 기준)에 근거한 근사 계산 도구이며, 실제 지급액은 회사의 급여 규정, 통상임금 산정 방식 등에 따라 달라질 수 있습니다. 정확한 금액은 회사 인사부서 또는 세무 전문가에게 확인하세요.
+      </p>
+    </div>
+
+    <!-- RIGHT: RESULT STUB -->
+    <div class="lg:col-span-2">
+      <div class="lg:sticky lg:top-8 stub shadow-[6px_6px_0_0_var(--ink)]">
+
+        <!-- Stub header -->
+        <div class="p-5 sm:p-6 flex items-start justify-between gap-3">
+          <div>
+            <p class="eyebrow text-[10px] text-[var(--ink-soft)]">FINAL PAYOUT · 최종 정산 내역</p>
+            <h3 class="font-serif-kr text-xl font-700 mt-1">실수령액 명세</h3>
+          </div>
+          <div class="stamp">실수령</div>
+        </div>
+
+        <div class="px-5 sm:px-6 pb-5">
+          <p class="text-xs text-[var(--ink-soft)] mb-1">최종 실수령액 (세전 퇴직금 + 연차수당 − 세금)</p>
+          <p id="netResult" class="font-mono-num text-3xl sm:text-4xl font-700 text-[var(--money)] break-all">0<span class="text-lg font-500">원</span></p>
+        </div>
+
+        <div class="perforation mx-5 sm:mx-6"></div>
+
+        <!-- Breakdown -->
+        <div class="px-5 sm:px-6 py-5 space-y-0.5">
+          <p class="eyebrow text-[10px] text-[var(--ink-soft)] mb-2">지급 내역 (+)</p>
+
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">근속일수 / 근속연수</span>
+            <span id="outDuration" class="font-mono-num">-</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">1일 평균임금</span>
+            <span id="outDailyWage" class="font-mono-num">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">예상 퇴직금 (세전)</span>
+            <span id="outSeverance" class="font-mono-num font-700">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">미사용 연차수당</span>
+            <span id="outLeavePay" class="font-mono-num font-700">0원</span>
+          </div>
+
+          <p class="eyebrow text-[10px] text-[var(--tax)] mt-4 mb-2">공제 내역 (−)</p>
+
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">근속연수공제</span>
+            <span id="outSvcDeduct" class="font-mono-num">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">환산급여 / 환산급여공제</span>
+            <span id="outConvDeduct" class="font-mono-num text-right">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">퇴직소득세 (국세)</span>
+            <span id="outTaxNational" class="font-mono-num text-[var(--tax)] font-700">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2 row-line text-sm">
+            <span class="text-[var(--ink-soft)]">지방소득세 (10%)</span>
+            <span id="outTaxLocal" class="font-mono-num text-[var(--tax)] font-700">0원</span>
+          </div>
+          <div class="flex justify-between items-center py-2.5 mt-1 bg-[var(--tax-soft)] px-3 text-sm">
+            <span class="font-700">퇴직소득세 합계</span>
+            <span id="outTaxTotal" class="font-mono-num text-[var(--tax)] font-700">0원</span>
+          </div>
+        </div>
+
+        <div class="perforation mx-5 sm:mx-6"></div>
+
+        <div class="p-5 sm:p-6">
+          <button id="copyBtn" class="w-full border-2 border-[var(--ink)] text-[var(--ink)] font-700 text-sm py-3 hover:bg-[var(--ink)] hover:text-white transition-colors flex items-center justify-center gap-2">
+            <svg id="copyIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copyLabel">결과 복사하기</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const startDateEl = $('startDate');
+  const endDateEl = $('endDate');
+  const threeMonthWageEl = $('threeMonthWage');
+  const annualBonusEl = $('annualBonus');
+  const unusedLeaveEl = $('unusedLeave');
+
+  const won = (n) => {
+    if (!isFinite(n)) n = 0;
+    n = Math.round(n);
+    return n.toLocaleString('ko-KR') + '원';
+  };
+
+  // ---- 숫자 입력에 자동 콤마 포맷 ----
+  function attachNumberFormatting(el){
+    el.addEventListener('input', () => {
+      const raw = el.value.replace(/[^0-9]/g, '');
+      el.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+      calculate();
+    });
+  }
+  [threeMonthWageEl, annualBonusEl, unusedLeaveEl].forEach(attachNumberFormatting);
+  [startDateEl, endDateEl].forEach(el => el.addEventListener('change', calculate));
+
+  function parseNum(el){
+    return Number(String(el.value).replace(/[^0-9]/g, '')) || 0;
+  }
+
+  // ---- 근속연수공제 ----
+  function serviceYearDeduction(years){
+    if (years <= 5) return years * 1000000;
+    if (years <= 10) return 5000000 + (years - 5) * 2000000;
+    if (years <= 20) return 15000000 + (years - 10) * 2500000;
+    return 40000000 + (years - 20) * 3000000;
+  }
+
+  // ---- 환산급여공제 ----
+  function conversionDeduction(x){
+    if (x <= 8000000) return x;
+    if (x <= 70000000) return 8000000 + (x - 8000000) * 0.6;
+    if (x <= 100000000) return 45200000 + (x - 70000000) * 0.55;
+    if (x <= 300000000) return 61700000 + (x - 100000000) * 0.45;
+    return 151700000 + (x - 300000000) * 0.35;
+  }
+
+  // ---- 종합소득세 기본세율(누진) ----
+  function basicTax(base){
+    if (base <= 0) return 0;
+    if (base <= 14000000) return base * 0.06;
+    if (base <= 50000000) return 840000 + (base - 14000000) * 0.15;
+    if (base <= 88000000) return 6240000 + (base - 50000000) * 0.24;
+    if (base <= 150000000) return 15360000 + (base - 88000000) * 0.35;
+    if (base <= 300000000) return 37060000 + (base - 150000000) * 0.38;
+    if (base <= 500000000) return 94060000 + (base - 300000000) * 0.40;
+    if (base <= 1000000000) return 174060000 + (base - 500000000) * 0.42;
+    return 384060000 + (base - 1000000000) * 0.45;
+  }
+
+  function daysBetween(d1, d2){
+    return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  }
+
+  let lastResult = null;
+
+  function calculate(){
+    const startVal = startDateEl.value;
+    const endVal = endDateEl.value;
+
+    const threeMonthWage = parseNum(threeMonthWageEl);
+    const annualBonus = parseNum(annualBonusEl);
+    const unusedLeave = parseNum(unusedLeaveEl);
+
+    if (!startVal || !endVal){
+      $('durationDisplay').textContent = '근속일수를 계산하려면 입사일과 퇴사일을 입력하세요.';
+      return;
+    }
+
+    const startDate = new Date(startVal + 'T00:00:00');
+    const endDate = new Date(endVal + 'T00:00:00');
+
+    if (endDate <= startDate){
+      $('durationDisplay').innerHTML = '<span class="text-[var(--tax)]">퇴사일은 입사일보다 이후 날짜여야 합니다.</span>';
+      return;
+    }
+
+    const workDays = daysBetween(startDate, endDate);
+    const durYears = Math.floor(workDays / 365);
+    const remAfterYears = workDays % 365;
+    const durMonths = Math.floor(remAfterYears / 30);
+    const durDays = remAfterYears % 30;
+
+    $('durationDisplay').innerHTML =
+      `근속일수 <b class="font-mono-num">${workDays.toLocaleString('ko-KR')}일</b> · 근속기간 약 <b class="font-mono-num">${durYears}년 ${durMonths}개월 ${durDays}일</b>`;
+
+    // 세법상 근속연수 (1년 미만 올림, 최소 1년)
+    const taxYears = Math.max(1, Math.ceil(workDays / 365));
+
+    // 최근 3개월 기간의 실제 일수 계산 (퇴사일 기준 역산)
+    const threeMonthsAgo = new Date(endDate);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    let periodDays = daysBetween(threeMonthsAgo, endDate);
+    if (periodDays <= 0) periodDays = 90;
+
+    // 평균임금 산정 임금총액 = 3개월 급여 + (연차수당·상여금 연간액의 3/12)
+    const wageBaseForAvg = threeMonthWage + (annualBonus * 3 / 12);
+    const avgDailyWage = periodDays > 0 ? wageBaseForAvg / periodDays : 0;
+
+    // 예상 퇴직금 (세전) = 1일 평균임금 × 30 × (재직일수/365)
+    const severancePay = avgDailyWage * 30 * (workDays / 365);
+
+    // 미사용 연차수당 (근사: 1일 평균임금 기준)
+    const leavePay = avgDailyWage * unusedLeave;
+
+    // ---- 퇴직소득세 계산 ----
+    const svcDeduction = serviceYearDeduction(taxYears);
+    const afterSvcDeduction = Math.max(0, severancePay - svcDeduction);
+    const convertedSalary = (afterSvcDeduction / taxYears) * 12;
+    const convDeduction = conversionDeduction(convertedSalary);
+    const taxBase = Math.max(0, convertedSalary - convDeduction);
+    const convertedTax = basicTax(taxBase);
+    const nationalTax = (convertedTax * taxYears) / 12;
+    const localTax = nationalTax * 0.1;
+    const totalTax = nationalTax + localTax;
+
+    const netTakeHome = severancePay + leavePay - totalTax;
+
+    // ---- 화면 반영 ----
+    $('outDuration').textContent = `${workDays.toLocaleString('ko-KR')}일 / ${taxYears}년(세법상)`;
+    $('outDailyWage').textContent = won(avgDailyWage);
+    $('outSeverance').textContent = won(severancePay);
+    $('outLeavePay').textContent = won(leavePay);
+    $('outSvcDeduct').textContent = '−' + won(svcDeduction);
+    $('outConvDeduct').textContent = `${won(convertedSalary)} / −${won(convDeduction)}`;
+    $('outTaxNational').textContent = '−' + won(nationalTax);
+    $('outTaxLocal').textContent = '−' + won(localTax);
+    $('outTaxTotal').textContent = '−' + won(totalTax);
+    $('netResult').innerHTML = `${Math.round(netTakeHome).toLocaleString('ko-KR')}<span class="text-lg font-500">원</span>`;
+
+    lastResult = {
+      workDays, taxYears, avgDailyWage, severancePay, leavePay,
+      svcDeduction, convertedSalary, convDeduction, nationalTax, localTax, totalTax, netTakeHome,
+      startVal, endVal
+    };
+  }
+
+  // ---- 결과 복사 ----
+  $('copyBtn').addEventListener('click', () => {
+    if (!lastResult){
+      calculate();
+      if (!lastResult) return;
+    }
+    const r = lastResult;
+    const text =
+`[퇴사 실수령액 계산 결과]
+근무기간: ${r.startVal} ~ ${r.endVal} (${r.workDays.toLocaleString('ko-KR')}일, 세법상 ${r.taxYears}년)
+예상 퇴직금(세전): ${won(r.severancePay)}
+미사용 연차수당: ${won(r.leavePay)}
+퇴직소득세(국세): -${won(r.nationalTax)}
+지방소득세: -${won(r.localTax)}
+퇴직소득세 합계: -${won(r.totalTax)}
+──────────────
+최종 실수령액: ${won(r.netTakeHome)}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      const label = $('copyLabel');
+      const original = label.textContent;
+      label.textContent = '복사 완료!';
+      setTimeout(() => { label.textContent = original; }, 1800);
+    }).catch(() => {
+      const label = $('copyLabel');
+      label.textContent = '복사 실패 - 직접 선택해주세요';
+      setTimeout(() => { label.textContent = '결과 복사하기'; }, 2200);
+    });
+  });
+
+  $('calcBtn').addEventListener('click', calculate);
+
+  // 초기 예시 값 없이 대기 상태로 시작
+})();
+</script>
+
+</body>
+</html>
