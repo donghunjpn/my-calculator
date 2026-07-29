@@ -76,6 +76,18 @@
   .eyebrow{
     letter-spacing: .18em;
   }
+    /* 터미널 커서 깜빡임 */
+  .cursor-blink{
+    display:inline-block;
+    width: .5ch;
+    margin-left: 2px;
+    background: var(--amber);
+    transform: translateY(2px);
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .cursor-blink{ animation: blink 1.1s steps(1) infinite; }
+  }
+  @keyframes blink{ 50%{ opacity: 0; } }
   /* 카드 공통 */
   .tool-card{
     --accent: var(--neutral);
